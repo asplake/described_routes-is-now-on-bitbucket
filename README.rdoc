@@ -38,7 +38,7 @@ The same example, with the <code>user_id</code> and <code>format</code> paramete
       edit             edit_user_profile    GET                    http://localhost:3000/users/dojo/profile/edit.json
       new              new_user_profile     GET                    http://localhost:3000/users/dojo/profile/new.json
 
-=== Using JSON, YAML or XMl formats
+=== Using JSON, YAML or XML formats
 
 More typically, JSON, YAML or XML format would be requested.  Their addresses can be referenced in <code><link></code> elements in the
 <code><head></code> section of an HTML page or (better) in HTTP headers, so any resource - regardless of format - can easily link to its
@@ -46,26 +46,25 @@ own instance-specific metadata.
 
 JSON example (after pretty printing):
 
-  $ curl "http://localhost:3000/described_routes/user_articles.yaml?user_id=dojo&format=json"
   {
      "name":"user_articles",
      "rel":"articles",
-     "path_template":"\/users\/dojo\/articles.json",
-     "uri_template":"http:\/\/localhost:3000\/users\/dojo\/articles.json",
+     "path_template":"/users/dojo/articles.json",
+     "uri_template":"http://localhost:3000/users/dojo/articles.json",
      "options":["GET", "POST"],
      "resource_templates":[
         {
            "name":"new_user_article",
            "options":["GET"],
-           "path_template":"\/users\/dojo\/articles\/new.json",
-           "uri_template":"http:\/\/localhost:3000\/users\/dojo\/articles\/new.json",
+           "path_template":"/users/dojo/articles/new.json",
+           "uri_template":"http://localhost:3000/users/dojo/articles/new.json",
            "rel":"new_user_article"
         },
         {
            "name":"recent_user_articles",
            "options":["GET"],
-           "path_template":"\/users\/dojo\/articles\/recent.json",
-           "uri_template":"http:\/\/localhost:3000\/users\/dojo\/articles\/recent.json",
+           "path_template":"/users/dojo/articles/recent.json",
+           "uri_template":"http://localhost:3000/users/dojo/articles/recent.json",
            "rel":"recent"
         },
         {
@@ -74,15 +73,15 @@ JSON example (after pretty printing):
               {
                  "name":"edit_user_article",
                  "options":["GET"],
-                 "path_template":"\/users\/dojo\/articles\/{article_id}\/edit.json",
-                 "uri_template":"http:\/\/localhost:3000\/users\/dojo\/articles\/{article_id}\/edit.json",
+                 "path_template":"/users/dojo/articles/{article_id}/edit.json",
+                 "uri_template":"http://localhost:3000/users/dojo/articles/{article_id}/edit.json",
                  "rel":"edit",
                  "params":["article_id"]
               }
            ],
            "options":["GET", "PUT", "DELETE"],
-           "path_template":"\/users\/dojo\/articles\/{article_id}.json",
-           "uri_template":"http:\/\/localhost:3000\/users\/dojo\/articles\/{article_id}.json",
+           "path_template":"/users/dojo/articles/{article_id}.json",
+           "uri_template":"http://localhost:3000/users/dojo/articles/{article_id}.json",
            "params":["article_id"]
         }
      ]
