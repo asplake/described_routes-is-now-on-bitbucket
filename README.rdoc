@@ -1,0 +1,129 @@
+= described_routes
+
+== DESCRIPTION
+
+Dynamic, framework-neutral metadata describing path/URI structures, with natural translations to/from JSON, YAML and XML.  Bonus feature: a plain text report format!
+
+See roadmap for described_routes and path-to[http://github.com/asplake/path-to/tree] at http://positiveincline.com/?p=213.
+
+== Examples:
+
+Plain text example:
+
+  users                  users                GET, POST              http://localhost:3000/users{-prefix|.|format}
+    new_user             new_user             GET                    http://localhost:3000/users/new{-prefix|.|format}
+    {user_id}            user                 GET, PUT, DELETE       http://localhost:3000/users/{user_id}{-prefix|.|format}
+      edit               edit_user            GET                    http://localhost:3000/users/{user_id}/edit{-prefix|.|format}
+      articles           user_articles        GET, POST              http://localhost:3000/users/{user_id}/articles{-prefix|.|format}
+        new_user_article new_user_article     GET                    http://localhost:3000/users/{user_id}/articles/new{-prefix|.|format}
+        recent           recent_user_articles GET                    http://localhost:3000/users/{user_id}/articles/recent{-prefix|.|format}
+        {article_id}     user_article         GET, PUT, DELETE       http://localhost:3000/users/{user_id}/articles/{article_id}{-prefix|.|format}
+          edit           edit_user_article    GET                    http://localhost:3000/users/{user_id}/articles/{article_id}/edit{-prefix|.|format}
+      profile            user_profile         GET, PUT, DELETE, POST http://localhost:3000/users/{user_id}/profile{-prefix|.|format}
+        edit             edit_user_profile    GET                    http://localhost:3000/users/{user_id}/profile/edit{-prefix|.|format}
+        new              new_user_profile     GET                    http://localhost:3000/users/{user_id}/profile/new{-prefix|.|format}
+
+=== Dynamic partial template expansion
+
+The same example, with the <code>user_id</code> and <code>format</code> parameters replaced with actual values <code>"dojo"</code> and <code>"json"</code>, leaving <code>article_id</code>:
+
+  user                 user                 GET, PUT, DELETE       http://localhost:3000/users/dojo.json
+    edit               edit_user            GET                    http://localhost:3000/users/dojo/edit.json
+    articles           user_articles        GET, POST              http://localhost:3000/users/dojo/articles.json
+      new_user_article new_user_article     GET                    http://localhost:3000/users/dojo/articles/new.json
+      recent           recent_user_articles GET                    http://localhost:3000/users/dojo/articles/recent.json
+      {article_id}     user_article         GET, PUT, DELETE       http://localhost:3000/users/dojo/articles/{article_id}.json
+        edit           edit_user_article    GET                    http://localhost:3000/users/dojo/articles/{article_id}/edit.json
+    profile            user_profile         GET, PUT, DELETE, POST http://localhost:3000/users/dojo/profile.json
+      edit             edit_user_profile    GET                    http://localhost:3000/users/dojo/profile/edit.json
+      new              new_user_profile     GET                    http://localhost:3000/users/dojo/profile/new.json
+
+=== Using JSON, YAML or XMl formats
+
+More typically, JSON, YAML or XML format would be requested.  Their addresses can be referenced in <code><link></code> elements in the
+<code><head></code> section of an HTML page or (better) in HTTP headers, so any resource - regardless of format - can easily link to its
+own instance-specific metadata.
+
+JSON example (after pretty printing):
+
+  $ curl "http://localhost:3000/described_routes/user_articles.yaml?user_id=dojo&format=json"
+  {
+     "name":"user_articles",
+     "rel":"articles",
+     "path_template":"\/users\/dojo\/articles.json",
+     "uri_template":"http:\/\/localhost:3000\/users\/dojo\/articles.json",
+     "options":["GET", "POST"],
+     "resource_templates":[
+        {
+           "name":"new_user_article",
+           "options":["GET"],
+           "path_template":"\/users\/dojo\/articles\/new.json",
+           "uri_template":"http:\/\/localhost:3000\/users\/dojo\/articles\/new.json",
+           "rel":"new_user_article"
+        },
+        {
+           "name":"recent_user_articles",
+           "options":["GET"],
+           "path_template":"\/users\/dojo\/articles\/recent.json",
+           "uri_template":"http:\/\/localhost:3000\/users\/dojo\/articles\/recent.json",
+           "rel":"recent"
+        },
+        {
+           "name":"user_article",
+           "resource_templates":[
+              {
+                 "name":"edit_user_article",
+                 "options":["GET"],
+                 "path_template":"\/users\/dojo\/articles\/{article_id}\/edit.json",
+                 "uri_template":"http:\/\/localhost:3000\/users\/dojo\/articles\/{article_id}\/edit.json",
+                 "rel":"edit",
+                 "params":["article_id"]
+              }
+           ],
+           "options":["GET", "PUT", "DELETE"],
+           "path_template":"\/users\/dojo\/articles\/{article_id}.json",
+           "uri_template":"http:\/\/localhost:3000\/users\/dojo\/articles\/{article_id}.json",
+           "params":["article_id"]
+        }
+     ]
+  }
+
+== DATA STRUCTURES and FORMATS
+
+=== Natural structure
+
+The YAML and JSON representations appear as simple hash and array structures, corresponding to the <code>ResourceTemplate</code> and <code>ResourceTemplates</code> classes.  Each resource is represented by a hash of attributes
+(one of which may be a list of its child resources); the top level structure is an array of parentless resources.
+
+Attributes:
+
++name+::            An application-wide identifier
++rel+::             An indication of a child resource's relationship to its parent
++options+::         A list of HTTP methods supported by the resource
++path_template+::   A template for the resource's path, in the style of URI Template but as a relative path
++uri_template+::    A template for the resource's URI (generated only if the root URI is known at generation time)
++params+::          A list of parameters required by path_template
++optional_params+:: A list of optional parameters that may be incorporated by the path_template
+
+Empty or blank attributes are omitted.
+
+=== XML
+
+[not yet implemented in Python]
+
+This follows the natural structure but with the following modifications:
+
+* A +ResourceTemplate+ element for each resource template
+* A +ResourceTemplates+ element for each list of resources (top level or subresources)
+* +Params+ and +OptionalParams+ elements for +params+ and +optional_params+, each containing +param+ elements
+* A single +options+ element contains the applicable HTTP methods as a comma-separated list
+
+== REQUIREMENTS:
+
+Joe Gregorio's URI Template parser (to be found at http://code.google.com/p/uri-templates/source/browse/#svn/trunk).
+
+Your favourite JSON or YAML printer/parser.
+
+== Author
+
+Mike Burrows (asplake), email mailto:mjb@asplake.co.uk, website positiveincline.com[http://positiveincline.com] (see articles tagged described_routes[http://positiveincline.com/?tag=described_routes])
