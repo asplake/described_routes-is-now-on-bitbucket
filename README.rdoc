@@ -2,109 +2,80 @@
 
 == DESCRIPTION
 
-Dynamic, framework-neutral metadata describing path/URI structures, with natural translations to/from JSON, YAML and XML.  Bonus feature: a plain text report format!
+Dynamic, framework-neutral metadata describing path/URI structures natively in Python and through JSON, YAML and XML representations.
 
-See roadmap for described_routes and path-to[http://github.com/asplake/path-to/tree] at http://positiveincline.com/?p=213.
+Purpose: to define and support a metadata format capable of being generated dynamically from web applications, describing the URI structure of the application in its entirety or of specific resources and their related subresources.  In a very lightweight manner - focussed only on resource identification - it aims  to cover a spectrum ranging from application description languages (cf WSDL and WADL) through to more dynamic, hyperlinked interaction (cf REST and HATEOAS).
 
-== Examples:
+See roadmap for the original Ruby-based described_routes and path-to[http://github.com/asplake/path-to/tree] at http://positiveincline.com/?p=213.
 
-Plain text example:
+== CONTENTS
 
-  users                  users                GET, POST              http://localhost:3000/users{-prefix|.|format}
-    new_user             new_user             GET                    http://localhost:3000/users/new{-prefix|.|format}
-    {user_id}            user                 GET, PUT, DELETE       http://localhost:3000/users/{user_id}{-prefix|.|format}
-      edit               edit_user            GET                    http://localhost:3000/users/{user_id}/edit{-prefix|.|format}
-      articles           user_articles        GET, POST              http://localhost:3000/users/{user_id}/articles{-prefix|.|format}
-        new_user_article new_user_article     GET                    http://localhost:3000/users/{user_id}/articles/new{-prefix|.|format}
-        recent           recent_user_articles GET                    http://localhost:3000/users/{user_id}/articles/recent{-prefix|.|format}
-        {article_id}     user_article         GET, PUT, DELETE       http://localhost:3000/users/{user_id}/articles/{article_id}{-prefix|.|format}
-          edit           edit_user_article    GET                    http://localhost:3000/users/{user_id}/articles/{article_id}/edit{-prefix|.|format}
-      profile            user_profile         GET, PUT, DELETE, POST http://localhost:3000/users/{user_id}/profile{-prefix|.|format}
-        edit             edit_user_profile    GET                    http://localhost:3000/users/{user_id}/profile/edit{-prefix|.|format}
-        new              new_user_profile     GET                    http://localhost:3000/users/{user_id}/profile/new{-prefix|.|format}
+* EXAMPLES
+  * Converting to and from JSON and YAML
+  * Plain text representation
+  * XML
+  * Basic URI and path generation
+  * Dynamic partial template expansion
+* DATA STRUCTURE
+  * Attributes
+  * Navigation
+* REQUIREMENTS
+* AUTHOR AND CONTACT INFORMATION
 
-=== Dynamic partial template expansion
+== EXAMPLES
 
-The same example, with the <code>user_id</code> and <code>format</code> parameters replaced with actual values <code>"dojo"</code> and <code>"json"</code>, leaving <code>article_id</code>:
+=== Converting to and from JSON and YAML
 
-  user                 user                 GET, PUT, DELETE       http://localhost:3000/users/dojo.json
-    edit               edit_user            GET                    http://localhost:3000/users/dojo/edit.json
-    articles           user_articles        GET, POST              http://localhost:3000/users/dojo/articles.json
-      new_user_article new_user_article     GET                    http://localhost:3000/users/dojo/articles/new.json
-      recent           recent_user_articles GET                    http://localhost:3000/users/dojo/articles/recent.json
-      {article_id}     user_article         GET, PUT, DELETE       http://localhost:3000/users/dojo/articles/{article_id}.json
-        edit           edit_user_article    GET                    http://localhost:3000/users/dojo/articles/{article_id}/edit.json
-    profile            user_profile         GET, PUT, DELETE, POST http://localhost:3000/users/dojo/profile.json
-      edit             edit_user_profile    GET                    http://localhost:3000/users/dojo/profile/edit.json
-      new              new_user_profile     GET                    http://localhost:3000/users/dojo/profile/new.json
+The ResourceTemplate and ResourceTemplates classes have constructors that can take native Python dicts and lists (of dicts or of ResourceTemplate objects), so that converting to and from JSON and YAML is very straightforward.  For example (with output edited for brevity and formatting), JSON conversions look like this:
 
-=== Using JSON, YAML or XML formats
-
-More typically, JSON, YAML or XML format would be requested.  Their addresses can be referenced in <code><link></code> elements in the
-<code><head></code> section of an HTML page or (better) in HTTP headers, so any resource - regardless of format - can easily link to its
-own instance-specific metadata.
-
-JSON example (after pretty printing):
-
+  >>> import json
+  >>> user = ResourceTemplate(json.loads(user_json))
+  >>> print json.dumps(user.to_dict())
   {
-     "name":"user_articles",
-     "rel":"articles",
-     "path_template":"/users/dojo/articles.json",
-     "uri_template":"http://localhost:3000/users/dojo/articles.json",
-     "options":["GET", "POST"],
-     "resource_templates":[
-        {
-           "name":"new_user_article",
-           "options":["GET"],
-           "path_template":"/users/dojo/articles/new.json",
-           "uri_template":"http://localhost:3000/users/dojo/articles/new.json",
-           "rel":"new_user_article"
-        },
-        {
-           "name":"recent_user_articles",
-           "options":["GET"],
-           "path_template":"/users/dojo/articles/recent.json",
-           "uri_template":"http://localhost:3000/users/dojo/articles/recent.json",
-           "rel":"recent"
-        },
-        {
-           "name":"user_article",
-           "resource_templates":[
-              {
-                 "name":"edit_user_article",
-                 "options":["GET"],
-                 "path_template":"/users/dojo/articles/{article_id}/edit.json",
-                 "uri_template":"http://localhost:3000/users/dojo/articles/{article_id}/edit.json",
-                 "rel":"edit",
-                 "params":["article_id"]
-              }
-           ],
-           "options":["GET", "PUT", "DELETE"],
-           "path_template":"/users/dojo/articles/{article_id}.json",
-           "uri_template":"http://localhost:3000/users/dojo/articles/{article_id}.json",
-           "params":["article_id"]
-        }
-     ]
+    "name": "user", 
+    "uri_template": "http://example.com/users/{user_id}{-prefix|.|format}", 
+    "params": ["user_id"], 
+    "optional_params": ["format"], 
+    "options": ["GET", "PUT", "DELETE"],
+    "resource_templates": [
+      {
+        "name": "edit_user", 
+        "rel": "edit", 
+        "uri_template": "http://example.com/users/{user_id}/edit{-prefix|.|format}", 
+        "params": ["user_id"], 
+        "optional_params": ["format"], 
+        "options": ["GET"]
+      }, 
+      {
+        "name": "user_articles", 
+        "rel": "articles", 
+        "uri_template": "http://example.com/users/{user_id}/articles{-prefix|.|format}", 
+        "params": ["user_id"], 
+        "optional_params": ["format"], 
+        "options": ["GET", "POST"]
+      }
+    ] 
   }
 
-== DATA STRUCTURES and FORMATS
+This (or something very much like it) should work with your favourite JSON module; YAML similarly.
 
-=== Natural structure
+=== Plain text representation
 
-The YAML and JSON representations appear as simple hash and array structures, corresponding to the <code>ResourceTemplate</code> and <code>ResourceTemplates</code> classes.  Each resource is represented by a hash of attributes
-(one of which may be a list of its child resources); the top level structure is an array of parentless resources.
+ResourceTemplate and ResourceTemplates objects print as follows (using a more complete example):
 
-Attributes:
-
-+name+::            An application-wide identifier
-+rel+::             An indication of a child resource's relationship to its parent
-+options+::         A list of HTTP methods supported by the resource
-+path_template+::   A template for the resource's path, in the style of URI Template but as a relative path
-+uri_template+::    A template for the resource's URI (generated only if the root URI is known at generation time)
-+params+::          A list of parameters required by path_template
-+optional_params+:: A list of optional parameters that may be incorporated by the path_template
-
-Empty or blank attributes are omitted.
+  >>> print users
+  users                  users                GET, POST              http://example.com/users{-prefix|.|format}
+    new_user             new_user             GET                    http://example.com/users/new{-prefix|.|format}
+    {user_id}            user                 GET, PUT, DELETE       http://example.com/users/{user_id}{-prefix|.|format}
+      edit               edit_user            GET                    http://example.com/users/{user_id}/edit{-prefix|.|format}
+      articles           user_articles        GET, POST              http://example.com/users/{user_id}/articles{-prefix|.|format}
+        new_user_article new_user_article     GET                    http://example.com/users/{user_id}/articles/new{-prefix|.|format}
+        recent           recent_user_articles GET                    http://example.com/users/{user_id}/articles/recent{-prefix|.|format}
+        {article_id}     user_article         GET, PUT, DELETE       http://example.com/users/{user_id}/articles/{article_id}{-prefix|.|format}
+          edit           edit_user_article    GET                    http://example.com/users/{user_id}/articles/{article_id}/edit{-prefix|.|format}
+      profile            user_profile         GET, PUT, DELETE, POST http://example.com/users/{user_id}/profile{-prefix|.|format}
+        edit             edit_user_profile    GET                    http://example.com/users/{user_id}/profile/edit{-prefix|.|format}
+        new              new_user_profile     GET                    http://example.com/users/{user_id}/profile/new{-prefix|.|format}
 
 === XML
 
@@ -117,12 +88,68 @@ This follows the natural structure but with the following modifications:
 * +Params+ and +OptionalParams+ elements for +params+ and +optional_params+, each containing +param+ elements
 * A single +options+ element contains the applicable HTTP methods as a comma-separated list
 
-== REQUIREMENTS:
+=== Basic URI and path generation
+
+URIs and paths can be generated for specific resources, given a dict of actual parameters:
+
+  >>> actual_params = {"user_id": "dojo", "format": "json"}
+  >>> users.uri_for({"user_id": "dojo", "format": "json"})
+  "http://example.com/users/dojo.json"
+  >>> users.uri_for({"user_id": "dojo", "format": "json"})
+  "/users/dojo.json"
+
+=== Dynamic partial template expansion
+
+ResourceTemplate objects can be parameterised as shown below.  The effect of this is to define a "mini application" around a concrete resource of set of resources, supporting a more dynamic, hyperlinked style.
+
+  >>> actual_params = {"user_id": "dojo", "format": "json"}
+  >>> print user.partial_expand(actual_params)
+  user                 user                 GET, PUT, DELETE       http://example.com/users/dojo.json
+    edit               edit_user            GET                    http://example.com/users/dojo/edit.json
+    articles           user_articles        GET, POST              http://example.com/users/dojo/articles.json
+      new_user_article new_user_article     GET                    http://example.com/users/dojo/articles/new.json
+      recent           recent_user_articles GET                    http://example.com/users/dojo/articles/recent.json
+      {article_id}     user_article         GET, PUT, DELETE       http://example.com/users/dojo/articles/{article_id}.json
+        edit           edit_user_article    GET                    http://example.com/users/dojo/articles/{article_id}/edit.json
+    profile            user_profile         GET, PUT, DELETE, POST http://example.com/users/dojo/profile.json
+      edit             edit_user_profile    GET                    http://example.com/users/dojo/profile/edit.json
+      new              new_user_profile     GET                    http://example.com/users/dojo/profile/new.json
+
+== DATA STRUCTURE
+
+=== Attributes
+
+A ResourceTemplate object has the following attributes:
+
++name+::                An application-wide identifier
++rel+::                 An indication of a child resource's relationship to its parent
++path_template+::       A template for the resource's path, in the style of URI Template but as a relative path
++uri_template+::        A template for the resource's URI (generated only if the root URI is known at generation time)
++params+::              A list of parameters required by path_template
++optional_params+::     A list of optional parameters that may be incorporated by the path_template
++options+::             A list of HTTP methods supported by the resource
++resource_templates+::  A list of ResourceTemplate objects, implemented by the ResourceTemplates class
+
+All attributes are optional; empty or blank attributes are omitted in external representations.
+
+By convention, members of collections identified by key attributes don't have a <code>rel</code> attribute.  In the examples above, the <code>user</code> template has children named <code>edit_user</code> and <code>user_articles</code> with <code>rel</code> attributes of "edit" and "articles" respectively, but the <code>user_article</code> child of <code>user_articles</code> has none, as it is identified relative to its parent by an <code>article_id</code> parameter.
+
+=== Navigation
+
+These data structures (trees or list of trees) can be traversed by iterating through the ResourceTemplate members of ResourceTemplates objects, which might be at the top level or the <code>resource_templates</code> attribute of a ResourceTemplate object.
+
+Two methods support navigation by <code>name</code> or by <code>rel</code>:
+
+1) <code>ResourceTemplates.all_by_name()<code>: this returns a memoized dict of all ResourceTemplate objects in or below the ResourceTemplates collection
+
+2) <code>ResourceTemplate.find_by_rel(rel)<code>: this returns a list of all ResourceTemplate objects that are direct descendants of the target ResourceTemplate and have a <code>rel</code> attribute equal to the one the supplied (which may take the value <code>None</code>).
+
+== REQUIREMENTS
 
 Joe Gregorio's URI Template parser (to be found at http://code.google.com/p/uri-templates/source/browse/#svn/trunk).
 
 Your favourite JSON or YAML printer/parser.
 
-== Author
+== AUTHOR AND CONTACT INFORMATION
 
 Mike Burrows (asplake), email mailto:mjb@asplake.co.uk, website positiveincline.com[http://positiveincline.com] (see articles tagged described_routes[http://positiveincline.com/?tag=described_routes])

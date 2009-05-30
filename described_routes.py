@@ -2,8 +2,14 @@ from template_parser import URITemplate
 
 class ResourceTemplate(object):
     """
-    Dynamic, framework-neutral metadata describing path/URI structures, with natural translations to/from
-    JSON, YAML and XML.  Bonus feature: a plain text report format!
+    Dynamic, framework-neutral metadata describing path/URI structures natively in Python and through
+    JSON, YAML and XML representations.
+
+    Purpose: to define and support a metadata format capable of being generated dynamically from web
+    applications, describing the URI structure of the application in its entirety or of specific resources
+    and their related subresources.  In a very lightweight manner - focussed only on resource identification -
+    it aims to cover a spectrum ranging from application description languages (cf WSDL and WADL) through to
+    more dynamic, hyperlinked interaction (cf REST and HATEOAS).
     """
     def __init__(self, d={}, **kwargs):
         """
@@ -51,16 +57,11 @@ class ResourceTemplate(object):
         """
         d = dict()
         
-        if self.name: d['name'] = self.name
-        if self.rel: d['rel'] = self.rel
-        if self.uri_template: d['uri_template'] = self.uri_template
-        if self.path_template: d['path_template'] = self.path_template
-        
-        if self.params: d['params'] = self.params
-        if self.optional_params: d['optional_params'] = self.optional_params
-        if self.options: d['options'] = self.options
-        
-        if self.resource_templates: d['resource_templates'] = self.resource_templates.to_parsed_array()
+        for attr in ('name', 'rel', 'uri_template', 'path_template'):
+            val = getattr(self, attr)
+            if val: d['attr'] = val
+
+        if self.resource_templates: d['resource_templates'] = self.resource_templates.to_list()
         
         return d
 
@@ -168,7 +169,7 @@ class ResourceTemplates(list):
                 else:
                     raise TypeError(repr(rt) + " is neither a ResourceTemplate nor a dict")
 
-    def to_parsed_array(self):
+    def to_list(self):
         """
         Convert member ResourceTemplate objects to array of hashes equivalent to their JSON or YAML representations
         """
@@ -230,52 +231,66 @@ class ResourceTemplates(list):
         returning new resource templates
         """
         type(self)([rt.partial_expand(actual_params) for rt in self])
+
+
+if __name__ == "__main__":
+
+    users = ResourceTemplate(
+        {
+            'name':               'users',
+            'uri_template':       'http://example.com/users{-prefix|.|format}',
+            'path_template':      '/users{-prefix|.|format}',
+            'optional_params':    ['format'],
+            'options':            ['GET', 'POST'],
+            'resource_templates': [
+                {
+                    'name':               'user',
+                    'uri_template':       'http://example.com/users/{user_id}{-prefix|.|format}',
+                    'path_template':      '/users/{user_id}{-prefix|.|format}',
+                    'params':             ['user_id'],
+                    'optional_params':    ['format'],
+                    'options':            ['GET', 'PUT', 'DELETE'],
+                    'resource_templates': [
+                        {
+                            'name':            'user_articles',
+                            'rel':             'articles',
+                            'uri_template':    'http://example.com/users/{user_id}/articles{-prefix|.|format}',
+                            'path_template':   '/users/{user_id}/articles{-prefix|.|format}',
+                            'params':          ['user_id'],
+                            'optional_params': ['format'],
+                            'options':         ['GET', 'POST']
+                        },
+                        {
+                            'name':            'edit_user',
+                            'rel':             'edit',
+                            'uri_template':    'http://example.com/users/{user_id}/edit{-prefix|.|format}',
+                            'path_template':   '/users/{user_id}/edit{-prefix|.|format}',
+                            'params':          ['user_id'],
+                            'optional_params': ['format'],
+                            'options':         ['GET']
+                        }
+                    ]
+                }
+            ]
+        })
+
+    dojo = {'user_id': 'dojo'}
+
+    resource_templates = ResourceTemplates([users])
     
+    user = resource_templates.all_by_name()['user']
+    user_articles = resource_templates.all_by_name()['user_articles']
+    edit_user = user.find_by_rel('edit')[0]
 
-user_articles = ResourceTemplate(
-                    {
-                        'name':            'user_articles',
-                        'rel':             'articles',
-                        'uri_template':    'http://example.com/users/{user_id}/articles{-prefix|.|format}',
-                        'path_template':   '/users/{user_id}/articles{-prefix|.|format}',
-                        'params':          ['user_id'],
-                        'optional_params': ['format'],
-                        'options':         ['GET', 'POST']
-                    })
+    print '\n', users, '\n', users.to_dict(), '\n', users.path_for({})
+    print '\n', user_articles, '\n', user_articles.to_dict(), '\n', user_articles.path_for(dojo)
 
-edit_user = ResourceTemplate(
-                    {
-                        'name':            'edit_user',
-                        'rel':             'edit',
-                        'uri_template':    'http://example.com/users/{user_id}/edit{-prefix|.|format}',
-                        'path_template':   '/users/{user_id}/edit{-prefix|.|format}',
-                        'params':          ['user_id'],
-                        'optional_params': ['format'],
-                        'options':         ['GET']
-                    })
+    user_dojo = user.partial_expand(dojo)
+    print '\n', user_dojo, '\n', user_dojo.to_dict(), '\n', user_dojo.path_for(dojo)
 
-user = ResourceTemplate(
-                name               = 'user',
-                uri_template       = 'http://example.com/users/{user_id}{-prefix|.|format}',
-                path_template      = '/users/{user_id}{-prefix|.|format}',
-                params             = ['user_id'],
-                optional_params    = ['format'],
-                options            = ['GET', 'PUT', 'DELETE'],
-                resource_templates = [edit_user, user_articles])
+    print "\nuser.find_by_rel('edit')[0]\n", user.find_by_rel('edit')[0]
 
-resource_templates = ResourceTemplates([user])
+    print "\nresource_templates.all_by_name()['user_articles']\n", resource_templates.all_by_name()['user_articles']
 
-dojo = {'user_id': 'dojo'}
-
-print '\n', user_articles, '\n', user_articles.to_dict(), '\n', user_articles.path_for(dojo)
-print '\n', user, '\n', user.to_dict(), '\n', user.path_for(dojo)
-
-user_dojo = user.partial_expand(dojo)
-print '\n', user_dojo, '\n', user_dojo.to_dict(), '\n', user_dojo.path_for(dojo)
-
-print "\nuser.find_by_rel('edit')[0]\n", user.find_by_rel('edit')[0]
-
-print "\nresource_templates.all_by_name()['user_articles']\n", resource_templates.all_by_name()['user_articles']
-
-import json
-print json.dumps(resource_templates.to_parsed_array(), sort_keys=True, indent=4)
+    import json
+    print json.dumps(resource_templates.to_list(), sort_keys=True, indent=4)
