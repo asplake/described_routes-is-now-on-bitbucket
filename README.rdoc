@@ -4,7 +4,7 @@
 
 Dynamic, framework-neutral metadata describing path/URI structures natively in Python and through JSON, YAML and XML representations.
 
-Purpose: to define and support a metadata format capable of being generated dynamically from web applications, describing the URI structure of the application in its entirety or of specific resources and their related subresources.  In a very lightweight manner - focussed only on resource identification - it aims  to cover a spectrum ranging from application description languages (cf WSDL and WADL) through to more dynamic, hyperlinked interaction (cf REST and HATEOAS).
+Its purpose is to define and support a metadata format capable of being generated dynamically from web applications, describing the URI structure of the application in its entirety or of specific resources and their related subresources.  In a very lightweight manner - focussed only on resource identification - it aims  to cover a spectrum ranging from application description languages (cf WSDL and WADL) through to more dynamic, hyperlinked interaction (cf REST and HATEOAS).
 
 See roadmap for the original Ruby-based described_routes and path-to[http://github.com/asplake/path-to/tree] at http://positiveincline.com/?p=213.
 
@@ -95,8 +95,10 @@ URIs and paths can be generated for specific resources, given a dict of actual p
   >>> actual_params = {"user_id": "dojo", "format": "json"}
   >>> users.uri_for({"user_id": "dojo", "format": "json"})
   "http://example.com/users/dojo.json"
-  >>> users.uri_for({"user_id": "dojo", "format": "json"})
+  >>> users.path_for({"user_id": "dojo", "format": "json"})
   "/users/dojo.json"
+  
+Where the resource template has a <code>path_template</code> but no <code>uri_template</code>, a <code>base</code> parameter may be supplied to the <code>uri_for()</code> method.
 
 === Dynamic partial template expansion
 
@@ -142,7 +144,7 @@ Two methods support navigation by <code>name</code> or by <code>rel</code>:
 
 1) <code>ResourceTemplates.all_by_name()<code>: this returns a memoized dict of all ResourceTemplate objects in or below the ResourceTemplates collection
 
-2) <code>ResourceTemplate.find_by_rel(rel)<code>: this returns a list of all ResourceTemplate objects that are direct descendants of the target ResourceTemplate and have a <code>rel</code> attribute equal to the one the supplied (which may take the value <code>None</code>).
+2) <code>ResourceTemplate.find_by_rel(rel)</code>: this returns a list of all ResourceTemplate objects that are direct descendants of the target ResourceTemplate and have a <code>rel</code> attribute equal to the one the supplied (which may take the value <code>None</code>).
 
 == REQUIREMENTS
 

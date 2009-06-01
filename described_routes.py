@@ -79,7 +79,7 @@ class ResourceTemplate(object):
         
         all_params = self.params + self.optional_params
         if parent:
-            return all_params - parent.params
+            return [p for p in all_params if p not in parent.params]
         else:
             return all_params
 
@@ -90,23 +90,23 @@ class ResourceTemplate(object):
         """
         if self.uri_template:
             return self.uri_template
-        elif base and path_template:
-            base + path_template
+        elif base and self.path_template:
+            return base + self.path_template
             
     def uri_for(self, actual_params, base=None):
         """
         Returns an expanded URI template with template variables filled from the given params hash.
         Raises KeyError if params doesn't contain all mandatory params.
         """
-        missing_params = [p for p in params if p not in actual_params]
+        missing_params = [p for p in self.params if p not in actual_params]
         if missing_params:
             raise KeyError('missing params ' + ', '.join(missing_params))
             
         t = self.uri_template_for_base(base)
         if not t:
-            raise RuntimeError('uri_template_for_base(%s) is None; path_template=%s' % (repr(base)), repr(self.path_template))
+            raise RuntimeError('uri_template_for_base(%s) is None; path_template=%s' % (repr(base), repr(self.path_template)))
         
-        return URITemplate(t).sub(params)
+        return URITemplate(t).sub(actual_params)
         
     def path_for(self, actual_params):
         """
