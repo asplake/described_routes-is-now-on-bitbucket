@@ -57,9 +57,9 @@ class ResourceTemplate(object):
         """
         d = dict()
         
-        for attr in ('name', 'rel', 'uri_template', 'path_template'):
+        for attr in ('name', 'rel', 'uri_template', 'path_template', 'params', 'optional_params', 'options'):
             val = getattr(self, attr)
-            if val: d['attr'] = val
+            if val: d[attr] = val
 
         if self.resource_templates: d['resource_templates'] = self.resource_templates.to_list()
         
@@ -230,67 +230,122 @@ class ResourceTemplates(list):
         Partially expand the path_template or uri_template of the given resource templates with the given params,
         returning new resource templates
         """
-        type(self)([rt.partial_expand(actual_params) for rt in self])
+        return type(self)([rt.partial_expand(actual_params) for rt in self])
 
 
 if __name__ == "__main__":
+    import unittest
 
-    users = ResourceTemplate(
-        {
-            'name':               'users',
-            'uri_template':       'http://example.com/users{-prefix|.|format}',
-            'path_template':      '/users{-prefix|.|format}',
-            'optional_params':    ['format'],
-            'options':            ['GET', 'POST'],
-            'resource_templates': [
-                {
-                    'name':               'user',
-                    'uri_template':       'http://example.com/users/{user_id}{-prefix|.|format}',
-                    'path_template':      '/users/{user_id}{-prefix|.|format}',
-                    'params':             ['user_id'],
-                    'optional_params':    ['format'],
-                    'options':            ['GET', 'PUT', 'DELETE'],
-                    'resource_templates': [
-                        {
-                            'name':            'user_articles',
-                            'rel':             'articles',
-                            'uri_template':    'http://example.com/users/{user_id}/articles{-prefix|.|format}',
-                            'path_template':   '/users/{user_id}/articles{-prefix|.|format}',
-                            'params':          ['user_id'],
-                            'optional_params': ['format'],
-                            'options':         ['GET', 'POST']
-                        },
-                        {
-                            'name':            'edit_user',
-                            'rel':             'edit',
-                            'uri_template':    'http://example.com/users/{user_id}/edit{-prefix|.|format}',
-                            'path_template':   '/users/{user_id}/edit{-prefix|.|format}',
-                            'params':          ['user_id'],
-                            'optional_params': ['format'],
-                            'options':         ['GET']
-                        }
-                    ]
-                }
-            ]
-        })
+    data = \
+        [
+            {
+                'name':               'users',
+                'uri_template':       'http://example.com/users{-prefix|.|format}',
+                'optional_params':    ['format'],
+                'options':            ['GET', 'POST'],
+                'resource_templates': [
+                    {
+                        'name':               'new_user',
+                        'rel':                'new',
+                        'uri_template':       'http://example.com/users/new{-prefix|.|format}',
+                        'optional_params':    ['format'],
+                        'options':            ['GET'],
+                    },
+                    {
+                        'name':               'user',
+                        'uri_template':       'http://example.com/users/{user_id}{-prefix|.|format}',
+                        'params':             ['user_id'],
+                        'optional_params':    ['format'],
+                        'options':            ['GET', 'PUT', 'DELETE'],
+                        'resource_templates': [
+                            {
+                                'name':            'edit_user',
+                                'rel':             'edit',
+                                'uri_template':    'http://example.com/users/{user_id}/edit{-prefix|.|format}',
+                                'params':          ['user_id'],
+                                'optional_params': ['format'],
+                                'options':         ['GET']
+                            },
+                            {
+                                'name':            'user_articles',
+                                'rel':             'articles',
+                                'uri_template':    'http://example.com/users/{user_id}/articles{-prefix|.|format}',
+                                'params':          ['user_id'],
+                                'optional_params': ['format'],
+                                'options':         ['GET', 'POST'],
+                                'resource_templates': [
+                                    {
+                                        'name':               'user_article',
+                                        'uri_template':       'http://example.com/users/{user_id}/articles/{article_id}{-prefix|.|format}',
+                                        'params':             ['user_id', 'article_id'],
+                                        'optional_params':    ['format'],
+                                        'options':            ['GET', 'PUT', 'DELETE']
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                ]
+            },
+            {
+                'name':          'test_with_no_uri_template',
+                'path_template': '/path'
+            }
+        ]
+    resource_templates = ResourceTemplates(data)
+    params= {'user_id': 'dojo', 'format': 'json'}
 
-    dojo = {'user_id': 'dojo'}
+    def find_by_name(name):
+        return resource_templates.all_by_name()[name]
 
-    resource_templates = ResourceTemplates([users])
-    
-    user = resource_templates.all_by_name()['user']
-    user_articles = resource_templates.all_by_name()['user_articles']
-    edit_user = user.find_by_rel('edit')[0]
+    class TestResourceTemplate(unittest.TestCase):
+        def test_find_by_rel(self):
+            user = find_by_name('user')
+            edit_user = find_by_name('edit_user')
+            self.assertEqual([edit_user], user.find_by_rel('edit'))
+            
+        def test_uri_for(self):
+            user = find_by_name('user')
+            self.assertEqual('http://example.com/users/dojo.json', user.uri_for(params))
+            
+        def test_uri_based_on_path(self):
+            user = find_by_name('test_with_no_uri_template')
+            self.assertEqual('http://example.com/base/path', user.uri_for({}, 'http://example.com/base'))
+            
+        def test_partial_expand(self):
+            user_articles = find_by_name('user_articles')
+            if True:
+                 print "WARNING: URITemplate.partial_expand() not yet implemented"
+            else:
+                self.assertEqual(
+                    {
+                        'name':            'user_articles',
+                        'rel':             'articles',
+                        'uri_template':    'http://example.com/users/dojo/articles.json',
+                        'options':         ['GET', 'POST'],
+                        'resource_templates': [
+                            {
+                                'name':               'user_article',
+                                'uri_template':       'http://example.com/users/dojo/articles/{article_id}.json',
+                                'params':             ['article_id'],
+                                'options':            ['GET', 'PUT', 'DELETE']
+                            }
+                        ]
+                    },
+                    user_articles.partial_expand(params).to_dict())
+        
+        def test_positional_params(self):
+            user_articles = find_by_name('user_articles')
+            user_article = find_by_name('user_article')
+            self.assertEqual(['user_id', 'article_id','format'], user_article.positional_params(None))
+            self.assertEqual(['article_id','format'], user_article.positional_params(user_articles))
 
-    print '\n', users, '\n', users.to_dict(), '\n', users.path_for({})
-    print '\n', user_articles, '\n', user_articles.to_dict(), '\n', user_articles.path_for(dojo)
+        def test_str(self):
+            user_articles = find_by_name('user_articles')
+            self.assertEqual(
+                    'user_articles{user_id} user_articles GET, POST        http://example.com/users/{user_id}/articles{-prefix|.|format}\n' +
+                    '  {article_id}         user_article  GET, PUT, DELETE http://example.com/users/{user_id}/articles/{article_id}{-prefix|.|format}\n',
+                     str(user_articles))
 
-    user_dojo = user.partial_expand(dojo)
-    print '\n', user_dojo, '\n', user_dojo.to_dict(), '\n', user_dojo.path_for(dojo)
 
-    print "\nuser.find_by_rel('edit')[0]\n", user.find_by_rel('edit')[0]
-
-    print "\nresource_templates.all_by_name()['user_articles']\n", resource_templates.all_by_name()['user_articles']
-
-    import json
-    print json.dumps(resource_templates.to_list(), sort_keys=True, indent=4)
+    unittest.main()
