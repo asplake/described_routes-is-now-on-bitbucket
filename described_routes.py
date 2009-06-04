@@ -1,4 +1,4 @@
-from template_parser import URITemplate 
+import uri_template
 
 class ResourceTemplate(object):
     """
@@ -106,7 +106,7 @@ class ResourceTemplate(object):
         if not t:
             raise RuntimeError('uri_template_for_base(%s) is None; path_template=%s' % (repr(base), repr(self.path_template)))
         
-        return URITemplate(t).sub(actual_params)
+        return uri_template.sub(t, actual_params)
         
     def path_for(self, actual_params):
         """
@@ -120,7 +120,7 @@ class ResourceTemplate(object):
         if not self.path_template:
             raise RuntimeError('path_template is None')
 
-        return URITemplate(self.path_template).sub(actual_params)
+        return uri_template.sub(path_template, actual_params)
     
     def partial_expand(self, actual_params):
         """
@@ -140,8 +140,7 @@ class ResourceTemplate(object):
         """
         Partially expand a URI template
         """
-        # TODO implement URITemplate.partial_expand
-        if ut: return URITemplate(ut).sub(actual_params)
+        if ut: return uri_template.sub(ut, actual_params, partial=True)
   
     def find_by_rel(self, rel):
         """
@@ -314,25 +313,22 @@ if __name__ == "__main__":
             
         def test_partial_expand(self):
             user_articles = find_by_name('user_articles')
-            if True:
-                 print "WARNING: URITemplate.partial_expand() not yet implemented"
-            else:
-                self.assertEqual(
-                    {
-                        'name':            'user_articles',
-                        'rel':             'articles',
-                        'uri_template':    'http://example.com/users/dojo/articles.json',
-                        'options':         ['GET', 'POST'],
-                        'resource_templates': [
-                            {
-                                'name':               'user_article',
-                                'uri_template':       'http://example.com/users/dojo/articles/{article_id}.json',
-                                'params':             ['article_id'],
-                                'options':            ['GET', 'PUT', 'DELETE']
-                            }
-                        ]
-                    },
-                    user_articles.partial_expand(params).to_dict())
+            self.assertEqual(
+                {
+                    'name':            'user_articles',
+                    'rel':             'articles',
+                    'uri_template':    'http://example.com/users/dojo/articles.json',
+                    'options':         ['GET', 'POST'],
+                    'resource_templates': [
+                        {
+                            'name':               'user_article',
+                            'uri_template':       'http://example.com/users/dojo/articles/{article_id}.json',
+                            'params':             ['article_id'],
+                            'options':            ['GET', 'PUT', 'DELETE']
+                        }
+                    ]
+                },
+                user_articles.partial_expand(params).to_dict())
         
         def test_positional_params(self):
             user_articles = find_by_name('user_articles')
