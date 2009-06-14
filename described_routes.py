@@ -11,7 +11,7 @@ class ResourceTemplate(object):
     it aims to cover a spectrum ranging from application description languages (cf WSDL and WADL) through to
     more dynamic, hyperlinked interaction (cf REST and HATEOAS).
     """
-    def __init__(self, d={}, **kwargs):
+    def __init__(self, d={}, parent=None, **kwargs):
         """
         Initialize a ResourceTemplate from a dict &/or keyword arguments, all of which are optional.  For example:
 
@@ -49,7 +49,8 @@ class ResourceTemplate(object):
         for attr in ('params', 'optional_params', 'options'):
             setattr(self, attr, d.get(attr, []))
 
-        self.resource_templates = ResourceTemplates(d.get('resource_templates', []))
+        self.resource_templates = ResourceTemplates(d.get('resource_templates', []), parent)
+        self.parent = parent
 
     def to_dict(self, base=None):
         """
@@ -153,7 +154,7 @@ class ResourceTemplate(object):
 A list of ResourceTemplate objects.
 """
 class ResourceTemplates(list):
-    def __init__(self, collection=[]):
+    def __init__(self, collection=[], parent=None):
         """
         Initialize a ResourceTemplates object (a new collection of ResourceTemplate objects) from given collection of
         ResourceTemplates or hashes
@@ -164,7 +165,7 @@ class ResourceTemplates(list):
                 if isinstance(rt, ResourceTemplate):
                     self.append(rt)
                 elif isinstance(rt, dict):
-                    self.append(ResourceTemplate(rt))
+                    self.append(ResourceTemplate(rt, parent))
                 else:
                     raise TypeError(repr(rt) + " is neither a ResourceTemplate nor a dict")
 
@@ -342,6 +343,12 @@ if __name__ == "__main__":
                     'user_articles{user_id} user_articles GET, POST        http://example.com/users/{user_id}/articles{-prefix|.|format}\n' +
                     '  {article_id}         user_article  GET, PUT, DELETE http://example.com/users/{user_id}/articles/{article_id}{-prefix|.|format}\n',
                      str(user_articles))
+
+        def test_parent(self):
+            user_articles = find_by_name('user_articles')
+            self.assertEqual('user', user_articles.parent.name)
+            self.assertEqual('users', user_articles.parent.parent.name)
+            self.assertNone(user_articles.parent.parent.parent)
 
 
     unittest.main()
